@@ -1,194 +1,3 @@
-//package com.example.gymlab.api
-//
-//import com.google.gson.annotations.SerializedName
-//import retrofit2.Response
-//import retrofit2.http.Body
-//import retrofit2.http.DELETE
-//import retrofit2.http.GET
-//import retrofit2.http.POST
-//import retrofit2.http.Path
-//import retrofit2.http.Query
-//
-//// Model cho Login/Register
-//data class LoginRequest(val email: String, val password: String)
-//data class RegisterRequest(val username: String, val email: String, val password: String, @SerializedName("full_name") val fullName: String)
-//data class LoginResponse(val success: Boolean, val message: String, val user: UserData?)
-//data class UserData(
-//    @SerializedName("user_id") val userId: Int?,
-//    val username: String?,
-//    val email: String?,
-//    @SerializedName("full_name") val fullName: String?,
-//    val goal_note: String?
-//)
-//
-//// --- MODEL MỚI CHO THỰC ĐƠN ---
-//data class DietSuggestion(
-//    @SerializedName("suggestion_id") val id: Int? = null,
-//    val title: String,
-//    val calories: Int,
-//    @SerializedName("meal_type") val mealType: String
-//)
-//
-//data class DietListResponse(
-//    val success: Boolean,
-//    val data: List<DietSuggestion>?
-//)
-//
-//// --- MODEL CHO CÂN NẶNG ---
-//data class WeightRecordApi(
-//    val id: Int? = null,
-//    @SerializedName("user_id") val userId: Int?,
-//    val weight: Float,
-//    @SerializedName("recorded_date") val recordedDate: String?
-//)
-//
-//data class WeightHistoryResponse(
-//    val success: Boolean,
-//    val data: List<WeightRecordApi>?
-//)
-//
-//data class AddWeightRequest(
-//    val weight: Float,
-//    @SerializedName("user_id") val userId: Int?
-//)
-//
-//// --- MODEL CHO BÀI TẬP VÀ LỊCH TẬP ---
-//data class Category(
-//    val id: Int,
-//    val name: String
-//)
-//
-//data class Exercise(
-//    val id: Int,
-//    val name: String,
-//    @SerializedName("category_id") val categoryId: Int,
-//    val description: String?,
-//    @SerializedName("image_url") val imageUrl: String?,
-//    @SerializedName("video_url") val videoUrl: String?
-//)
-//
-//data class WorkoutTemplate(
-//    val id: Int,
-//    val name: String,
-//    val description: String?
-//)
-//
-//data class ApplyTemplateRequest(
-//    @SerializedName("user_id") val userId: Int,
-//    @SerializedName("target_date") val targetDate: String,
-//    @SerializedName("template_id") val templateId: Int
-//)
-//
-//data class AddExerciseRequest(
-//    @SerializedName("user_id") val userId: Int,
-//    @SerializedName("target_date") val targetDate: String,
-//    @SerializedName("exercise_id") val exerciseId: Int
-//)
-//
-//data class WorkoutResultRequest(
-//    @SerializedName("detail_id") val detailId: Int,
-//    val duration: Int
-//)
-//
-//data class WorkoutResponse(
-//    val success: Boolean,
-//    val message: String,
-//    val calories: Int?,
-//    val exp: Int?
-//)
-//data class WorkoutExercise(
-//    val detailId: Int,
-//    val name: String,
-//    val duration: String,
-//    val isCompleted: Boolean,
-//    val calories: Int
-//)
-//
-//data class DailyScheduleResponse(
-//    val totalCalories: Int,
-//    val completedCount: Int,
-//    val totalCount: Int,
-//    val exercises: List<WorkoutExercise>
-//)
-//
-//data class TemplateExerciseRequest(
-//    val exerciseId: Int,
-//    val exerciseName: String,
-//    var sets: Int,
-//    var reps: Int,
-//    val orderIndex: Int
-//)
-//
-//data class WorkoutTemplateRequest(
-//    val name: String,
-//    val description: String,
-//    val exercises: List<TemplateExerciseRequest>
-//)
-//
-//
-//interface AuthApi {
-//
-//    @GET("daily-schedule")
-//    suspend fun getDailySchedule(
-//        @Query("user_id") userId: Int,
-//        @Query("date") date: String
-//    ): Response<DailyScheduleResponse>
-//
-//    @POST("workout-templates")
-//    suspend fun createWorkoutTemplate(
-//        @Body request: WorkoutTemplateRequest
-//    ): Response<LoginResponse>
-//    @POST("login")
-//    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
-//
-//    @POST("register")
-//    suspend fun register(@Body request: RegisterRequest): Response<LoginResponse>
-//
-//    // Lấy món ăn theo thứ
-//    @GET("diet/{day}")
-//    suspend fun getDietByDay(@Path("day") day: String): Response<DietListResponse>
-//
-//    // Thêm món ăn mới
-//    @POST("diet/add")
-//    suspend fun addDiet(@Body diet: DietSuggestion): Response<LoginResponse>
-//
-//    // Xóa món ăn
-//    @DELETE("diet/{id}")
-//    suspend fun deleteDiet(@Path("id") id: Int): Response<LoginResponse>
-//
-//    // API Cân nặng
-//    @GET("weight/history/{userId}")
-//    suspend fun getWeightHistory(@Path("userId") userId: Int): Response<WeightHistoryResponse>
-//
-//    @POST("weight/add")
-//    suspend fun addWeight(@Body request: AddWeightRequest): Response<LoginResponse>
-//
-//    // API Bài tập
-//    @GET("categories")
-//    suspend fun getCategories(): Response<List<Category>>
-//
-//    @GET("exercises")
-//    suspend fun getExercises(
-//        @Query("limit") limit: Int?,
-//        @Query("category_id") categoryId: Int
-//    ): Response<List<Exercise>>
-//
-//    @GET("templates")
-//    suspend fun getTemplates(@Query("user_id") userId: Int): Response<List<WorkoutTemplate>>
-//
-//    @POST("apply-template")
-//    suspend fun applyTemplateToDate(@Body request: ApplyTemplateRequest): Response<ApplyTemplateResponse>
-//
-//    @POST("add-exercise")
-//    suspend fun addExerciseToSchedule(
-//        @Body request: AddExerciseRequest
-//    ): Response<WorkoutResponse>
-//    @POST("workout-templates")
-//    suspend fun createWorkoutTemplate(@Body request: WorkoutTemplateRequest): Response<WorkoutTemplateResponse>
-//
-//    @POST("complete-exercise")
-//    suspend fun completeExercise(@Body request: WorkoutResultRequest): Response<WorkoutResponse>
-//}
 package com.example.gymlab.api
 
 import com.google.gson.annotations.SerializedName
@@ -265,6 +74,10 @@ data class AddWeightRequest(
 )
 
 // ===== Workout / Category / Exercise =====
+
+/**
+ * Model đại diện cho nhóm cơ (Category) để lọc bài tập trong AddWorkoutScreen.
+ */
 data class Category(
     val id: Int,
     val name: String,
@@ -272,59 +85,32 @@ data class Category(
     @SerializedName("image_url") val imageUrl: String? = null
 )
 
+/**
+ * Model đại diện cho một bài tập lẻ lấy từ hệ thống.
+ */
 data class Exercise(
     val id: Int,
     val name: String,
-
     @SerializedName("category_id")
     val categoryId: Int? = null,
-
     @SerializedName("category_name")
     val categoryName: String? = null,
-
     val description: String? = null,
     val calories: Int? = 0,
-
     @SerializedName("difficulty_level")
     val difficultyLevel: String? = null,
-
     @SerializedName("duration_seconds")
     val durationSeconds: Int? = 0,
-
     @SerializedName("image_url")
     val imageUrl: String? = null,
-
     @SerializedName("video_url")
     val videoUrl: String? = null
 )
-//data class Exercise(
-//    val id: Int,
-//
-//    @SerializedName(value = "name", alternate = ["exercise_name"])
-//    val name: String,
-//
-//    @SerializedName("category_id")
-//    val categoryId: Int? = null,
-//
-//    @SerializedName("category_name")
-//    val categoryName: String? = null,
-//
-//    val description: String? = null,
-//    val calories: Int? = 0,
-//
-//    @SerializedName("difficulty_level")
-//    val difficultyLevel: String? = null,
-//
-//    @SerializedName("duration_seconds")
-//    val durationSeconds: Int? = 0,
-//
-//    @SerializedName("image_url")
-//    val imageUrl: String? = null,
-//
-//    @SerializedName("video_url")
-//    val videoUrl: String? = null
-//)
 
+/**
+ * Model đại diện cho một mẫu lịch tập (Workout Template).
+ * [isGlobal] = 1 nếu là mẫu của hệ thống, 0 nếu là cá nhân tạo.
+ */
 data class WorkoutTemplate(
     val id: Int,
     val name: String,
@@ -333,6 +119,9 @@ data class WorkoutTemplate(
     @SerializedName("is_global") val isGlobal: Int? = 0
 )
 
+/**
+ * Payload chứa thông tin bài tập khi người dùng tự tạo mẫu lịch tập mới (CreateTemplateScreen).
+ */
 data class TemplateExerciseRequest(
     @SerializedName("exerciseId") val exerciseId: Int,
     @SerializedName("exerciseName") val exerciseName: String,
@@ -341,6 +130,9 @@ data class TemplateExerciseRequest(
     @SerializedName("orderIndex") val orderIndex: Int
 )
 
+/**
+ * Request body cho API POST /workout-templates để lưu mẫu lịch tập mới.
+ */
 data class WorkoutTemplateRequest(
     @SerializedName("user_id") val userId: Int? = 1,
     val name: String,
@@ -348,32 +140,42 @@ data class WorkoutTemplateRequest(
     val exercises: List<TemplateExerciseRequest>
 )
 
+/**
+ * Request body để áp dụng một mẫu lịch tập có sẵn vào ngày cụ thể (POST /apply-template).
+ */
 data class ApplyTemplateRequest(
     @SerializedName("user_id") val userId: Int,
     @SerializedName("target_date") val targetDate: String,
     @SerializedName("template_id") val templateId: Int
 )
 
+/**
+ * Request body để thêm một bài tập lẻ vào ngày cụ thể (POST /add-exercise).
+ */
 data class AddExerciseRequest(
     @SerializedName("user_id") val userId: Int,
     @SerializedName("target_date") val targetDate: String,
     @SerializedName("exercise_id") val exerciseId: Int
 )
 
+/**
+ * Request body gửi lên khi hoàn thành một bài tập (POST /complete-exercise).
+ * [effortFeedback] dùng làm hệ số nhân calories ở backend.
+ */
 data class WorkoutResultRequest(
     @SerializedName("detail_id") // Bắt buộc phải có để server.js hiểu
     val detailId: Int,
-
     @SerializedName("duration")
     val duration: Int,
-
     @SerializedName("mode")
     val mode: String,
-
     @SerializedName("effort_feedback") // Bắt buộc phải có để lưu được đánh giá
     val effortFeedback: Int
 )
 
+/**
+ * Response trả về kết quả tính toán thành tựu (calories, exp) sau khi tập xong.
+ */
 data class WorkoutResponse(
     val success: Boolean,
     val message: String,
@@ -382,50 +184,57 @@ data class WorkoutResponse(
 )
 
 // ===== Daily schedule =====
+
+/**
+ * Đại diện cho một bài tập nằm trong lịch tập của một ngày cụ thể.
+ * Được ánh xạ từ bảng session_exercise_details.
+ */
 data class WorkoutExercise(
     @SerializedName(value = "detailId", alternate = ["detail_id", "id"])
     val detailId: Int,
-
     @SerializedName(value = "name", alternate = ["exercise_name"])
     val name: String,
-
     @SerializedName("imageUrl")
     val imageUrl: String? = null,
-
     val duration: String,
-
     @SerializedName(value = "isCompleted", alternate = ["is_completed"])
     val isCompleted: Boolean,
-
     val calories: Int
 )
 
+/**
+ * Response cho màn hình WorkoutScheduleScreen, chứa danh sách bài tập trong ngày và tổng quan.
+ */
 data class DailyScheduleResponse(
     @SerializedName(value = "totalCalories", alternate = ["total_calories"])
     val totalCalories: Int = 0,
-
     @SerializedName(value = "completedCount", alternate = ["completed_count"])
     val completedCount: Int = 0,
-
     @SerializedName(value = "totalCount", alternate = ["total_count"])
     val totalCount: Int = 0,
-
     val exercises: List<WorkoutExercise> = emptyList()
 )
 
+// ===== Achievements =====
+
+/**
+ * Chỉ số thành tựu tổng hợp của người dùng (Level, Exp, Streak...).
+ */
 data class AchievementStats(
     val level: Int = 1,
     @SerializedName("total_exp") val totalExp: Int = 0, // Dùng để tính Level
     @SerializedName("current_streak") val currentStreak: Int = 0,
     @SerializedName("longest_streak") val longestStreak: Int = 0,
     @SerializedName("total_points") val totalPoints: Int = 0, // Tổng điểm tích lũy
-    @SerializedName("total_time") val totalTime: Int = 0,    // Thêm trường này (tính bằng giây)
+    @SerializedName("total_time") val totalTime: Int = 0,    // Tính bằng giây
     @SerializedName("last_activity_date") val lastActivityDate: String? = null,
     @SerializedName("last_workout_date") val lastWorkoutDate: String? = null
 )
 
 /**
- * Model định nghĩa 1 Huy hiệu
+ * Model định nghĩa 1 Huy hiệu (Badge) trong AchievementsScreen.
+ * Thuộc tính [isEarned] được Backend tính toán động (không lưu tĩnh trong DB)
+ * dựa trên total_points và longest_streak.
  */
 data class Badge(
     @SerializedName("badge_id") val badgeId: Int,
@@ -434,10 +243,12 @@ data class Badge(
     @SerializedName("icon_url") val iconUrl: String?,
     @SerializedName("required_points") val requiredPoints: Int,
     @SerializedName("required_streak") val requiredStreak: Int,
-
-    // Biến này được Server tự tính toán và trả về (không có trong DB)
     @SerializedName("is_earned") val isEarned: Boolean = false
 )
+
+/**
+ * Response gộp chung thống kê (stats) và danh sách huy hiệu (badges) cho màn hình thành tựu.
+ */
 data class AchievementsResponse(
     val success: Boolean,
     val message: String?,
@@ -471,46 +282,76 @@ interface AuthApi {
     @POST("weight/add")
     suspend fun addWeight(@Body request: AddWeightRequest): Response<ApiResponse>
 
-    // ===== Workout =====
+    // ===== Workout (Phần Cá Nhân Nguyễn Hải Nam) =====
+
+    /**
+     * Lấy danh sách các nhóm cơ (category).
+     */
     @GET("categories")
     suspend fun getCategories(): Response<List<Category>>
 
+    /**
+     * Lấy danh sách các bài tập. Hỗ trợ lọc theo danh mục [categoryId].
+     */
     @GET("exercises")
     suspend fun getExercises(
         @Query("limit") limit: Int? = null,
         @Query("category_id") categoryId: Int? = null
     ): Response<List<Exercise>>
 
+    /**
+     * Lấy danh sách các mẫu lịch tập (bao gồm global và cá nhân).
+     */
     @GET("templates")
     suspend fun getTemplates(
         @Query("limit") limit: Int? = null
     ): Response<List<WorkoutTemplate>>
 
+    /**
+     * Tạo mới một mẫu lịch tập cá nhân.
+     */
     @POST("workout-templates")
     suspend fun createWorkoutTemplate(
         @Body request: WorkoutTemplateRequest
     ): Response<ApiResponse>
 
+    /**
+     * Áp dụng toàn bộ bài tập từ một mẫu vào lịch của ngày cụ thể.
+     */
     @POST("apply-template")
     suspend fun applyTemplateToDate(
         @Body request: ApplyTemplateRequest
     ): Response<ApiResponse>
 
+    /**
+     * Thêm một bài tập đơn lẻ vào lịch của ngày cụ thể.
+     */
     @POST("add-exercise")
     suspend fun addExerciseToSchedule(
         @Body request: AddExerciseRequest
     ): Response<ApiResponse>
 
+    /**
+     * Lấy danh sách bài tập đã lên lịch cho một [date] cụ thể của user.
+     */
     @GET("daily-schedule")
     suspend fun getDailySchedule(
         @Query("user_id") userId: Int,
         @Query("date") date: String
     ): Response<DailyScheduleResponse>
 
+    /**
+     * Gửi kết quả sau khi hoàn thành 1 bài tập.
+     * Kích hoạt logic tính Calories, Exp, Streak phía Server.
+     */
     @POST("complete-exercise")
     suspend fun completeExercise(
         @Body request: WorkoutResultRequest
     ): Response<WorkoutResponse>
+
+    /**
+     * Lấy toàn bộ dữ liệu thành tựu (Chỉ số cá nhân + Danh sách huy hiệu) của User.
+     */
     @GET("achievements/{userId}")
     suspend fun getAchievements(
         @Path("userId") userId: Int

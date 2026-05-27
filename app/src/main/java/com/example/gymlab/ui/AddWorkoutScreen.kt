@@ -1,153 +1,12 @@
-//package com.example.gymlab.ui
-//
-//import androidx.compose.foundation.background
-//import androidx.compose.foundation.layout.*
-//import androidx.compose.foundation.lazy.LazyColumn
-//import androidx.compose.foundation.lazy.LazyRow
-//import androidx.compose.foundation.lazy.items
-//import androidx.compose.foundation.shape.RoundedCornerShape
-//import androidx.compose.material.icons.Icons
-//import androidx.compose.material.icons.automirrored.filled.ArrowBack
-//import androidx.compose.material3.*
-//import androidx.compose.runtime.*
-//import androidx.compose.ui.Alignment
-//import androidx.compose.ui.Modifier
-//import androidx.compose.ui.graphics.Color
-//import androidx.compose.ui.text.font.FontWeight
-//import androidx.compose.ui.unit.dp
-//import androidx.compose.ui.unit.sp
-//import com.example.gymlab.api.*
-//import com.example.gymlab.ui.theme.PrimaryPurple
-//import kotlinx.coroutines.launch
-//
-//@OptIn(ExperimentalMaterial3Api::class)
-//@Composable
-//fun AddWorkoutScreen(
-//    targetDate: String,
-//    onBackClick: () -> Unit,
-//    onSuccess: () -> Unit
-//) {
-//    val scope = rememberCoroutineScope()
-//    var templates by remember { mutableStateOf<List<WorkoutTemplate>>(emptyList()) }
-//    var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
-//    var exercises by remember { mutableStateOf<List<Exercise>>(emptyList()) }
-//    var selectedCategoryId by remember { mutableStateOf<Int?>(null) }
-//
-//    // Giả định userId = 1
-//    val userId = 1
-//
-//    fun fetchExercises(catId: Int? = null) {
-//        scope.launch {
-//            try {
-//                val res = RetrofitClient.instance.getExercises(null, catId)
-//                if (res.isSuccessful) exercises = res.body() ?: emptyList()
-//            } catch (e: Exception) { e.printStackTrace() }
-//        }
-//    }
-//
-//    LaunchedEffect(Unit) {
-//        scope.launch {
-//            try {
-//                val tRes = RetrofitClient.instance.getTemplates(20)
-//                if (tRes.isSuccessful) templates = tRes.body() ?: emptyList()
-//
-//                val cRes = RetrofitClient.instance.getCategories()
-//                if (cRes.isSuccessful) categories = cRes.body() ?: emptyList()
-//
-//                fetchExercises()
-//            } catch (e: Exception) { e.printStackTrace() }
-//        }
-//    }
-//
-//    Scaffold(
-//        topBar = {
-//            TopAppBar(
-//                title = { Text("Thêm vào: $targetDate", fontWeight = FontWeight.Bold) },
-//                navigationIcon = {
-//                    IconButton(onClick = onBackClick) {
-//                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-//                    }
-//                }
-//            )
-//        }
-//    ) { padding ->
-//        LazyColumn(
-//            modifier = Modifier
-//                .fillMaxSize()
-//                .padding(padding)
-//                .background(Color(0xFFF8F9FA)),
-//            contentPadding = PaddingValues(16.dp)
-//        ) {
-//            // Mẫu lịch tập
-//            item {
-//                Text("Mẫu lịch tập", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-//                Spacer(modifier = Modifier.height(8.dp))
-//                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-//                    items(templates) { template ->
-//                        TemplateCard(template) {
-//                            scope.launch {
-//                                try {
-//                                    val res = RetrofitClient.instance.applyTemplate(ApplyTemplateRequest(userId, targetDate, template.id))
-//                                    if (res.isSuccessful) onSuccess()
-//                                } catch (e: Exception) { e.printStackTrace() }
-//                            }
-//                        }
-//                    }
-//                }
-//                Spacer(modifier = Modifier.height(24.dp))
-//            }
-//
-//            // Bài tập lẻ
-//            item {
-//                Text("Bài tập lẻ", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-//                Spacer(modifier = Modifier.height(8.dp))
-//                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-//                    item {
-//                        CategoryChip(name = "Tất cả", isSelected = selectedCategoryId == null) {
-//                            selectedCategoryId = null
-//                            fetchExercises(null)
-//                        }
-//                    }
-//                    items(categories) { cat ->
-//                        CategoryChip(name = cat.name, isSelected = selectedCategoryId == cat.id) {
-//                            selectedCategoryId = cat.id
-//                            fetchExercises(cat.id)
-//                        }
-//                    }
-//                }
-//                Spacer(modifier = Modifier.height(16.dp))
-//            }
-//
-//            items(exercises) { exercise ->
-//                ExerciseListItem(exercise) {
-//                    scope.launch {
-//                        try {
-//                            val res = RetrofitClient.instance.addSingleExercise(AddExerciseRequest(userId, targetDate, exercise.id))
-//                            if (res.isSuccessful) onSuccess()
-//                        } catch (e: Exception) { e.printStackTrace() }
-//                    }
-//                }
-//                Spacer(modifier = Modifier.height(12.dp))
-//            }
-//        }
-//    }
-//}
-//
-//@Composable
-//fun TemplateCard(template: WorkoutTemplate, onClick: () -> Unit) {
-//    Card(
-//        onClick = onClick,
-//        modifier = Modifier.width(160.dp),
-//        shape = RoundedCornerShape(16.dp),
-//        colors = CardDefaults.cardColors(containerColor = Color.White),
-//        elevation = CardDefaults.cardElevation(2.dp)
-//    ) {
-//        Column(modifier = Modifier.padding(16.dp)) {
-//            Text(template.name, fontWeight = FontWeight.Bold, maxLines = 1)
-//            Text(template.description ?: "", fontSize = 12.sp, color = Color.Gray, maxLines = 2)
-//        }
-//    }
-//}
+/**
+ * File: AddWorkoutScreen.kt
+ * Project: Gymlab - Ứng dụng hỗ trợ luyện tập tại nhà
+ * Module: Giao diện Lên lịch tập luyện (Phần cá nhân)
+ * Author: Nguyễn Hải Nam - B22DCCN559
+ * Description: Màn hình cho phép người dùng thêm bài tập vào lịch tập của một ngày cụ thể.
+ * Hỗ trợ hai chế độ: Áp dụng theo mẫu lịch tập (Template) hoặc Thêm bài tập lẻ (Exercise).
+ */
+
 package com.example.gymlab.ui
 
 import androidx.compose.foundation.background
@@ -176,6 +35,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 
+/**
+ * Màn hình Thêm bài tập (Master-Detail flow từ WorkoutScheduleScreen).
+ *
+ * @param userId ID của người dùng.
+ * @param targetDate Ngày đang được chọn để thêm bài tập (Định dạng yyyy-MM-dd).
+ * @param onBackClick Callback quay lại màn hình trước.
+ * @param onSuccess Callback khi thêm bài tập/mẫu thành công (thường để reload lại lịch tập).
+ * @param onCreateTemplateClick Callback điều hướng sang màn hình CreateTemplateScreen.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddWorkoutScreen(
@@ -188,12 +56,20 @@ fun AddWorkoutScreen(
     val scope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    // Quản lý state cho danh sách dữ liệu từ API
     var templates by remember { mutableStateOf<List<WorkoutTemplate>>(emptyList()) }
     var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
     var exercises by remember { mutableStateOf<List<Exercise>>(emptyList()) }
+
+    // State lưu category đang được chọn để lọc bài tập lẻ
     var selectedCategoryId by remember { mutableStateOf<Int?>(null) }
+
+    // State quản lý hiệu ứng loading chung toàn màn hình
     var isLoading by remember { mutableStateOf(false) }
 
+    /**
+     * Lấy danh sách bài tập. Nếu [catId] != null, sẽ gọi API GET /exercises?category_id=catId.
+     */
     fun fetchExercises(catId: Int? = null) {
         scope.launch {
             try {
@@ -211,6 +87,10 @@ fun AddWorkoutScreen(
             }
         }
     }
+
+    /**
+     * Lấy danh sách mẫu lịch tập (GET /templates).
+     */
     fun fetchTemplates() {
         scope.launch {
             try {
@@ -233,6 +113,7 @@ fun AddWorkoutScreen(
         }
     }
 
+    // Effect khởi tạo: Gọi đồng thời API lấy templates, categories và exercises
     LaunchedEffect(Unit) {
         isLoading = true
         scope.launch {
@@ -256,6 +137,10 @@ fun AddWorkoutScreen(
             }
         }
     }
+
+    // Lắng nghe vòng đời ON_RESUME để tự động tải lại danh sách Template
+    // Đảm bảo sau khi người dùng tạo mẫu mới ở CreateTemplateScreen và quay lại đây,
+    // mẫu mới sẽ xuất hiện ngay lập tức mà không cần gọi API thủ công.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -299,6 +184,7 @@ fun AddWorkoutScreen(
                     .background(Color(0xFFF8F9FA)),
                 contentPadding = PaddingValues(16.dp)
             ) {
+                // Nhánh 1: Danh sách mẫu lịch tập (Template)
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -306,6 +192,7 @@ fun AddWorkoutScreen(
                     ) {
                         Text("Mẫu lịch tập", fontWeight = FontWeight.Bold, fontSize = 18.sp)
 
+                        // Nút điều hướng sang nhánh độc lập CreateTemplateScreen
                         TextButton(onClick = onCreateTemplateClick) {
                             Text("Tạo mẫu mới")
                         }
@@ -316,6 +203,7 @@ fun AddWorkoutScreen(
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(templates) { template ->
                             TemplateCard(template) {
+                                // Gọi API POST /apply-template để thêm toàn bộ bài tập trong mẫu vào ngày
                                 scope.launch {
                                     try {
                                         val res = RetrofitClient.instance.applyTemplateToDate(
@@ -339,10 +227,12 @@ fun AddWorkoutScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
 
+                // Nhánh 2: Danh sách bài tập lẻ có lọc theo nhóm cơ
                 item {
                     Text("Bài tập lẻ", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // Thanh cuộn ngang chứa các Filter Chip (nhóm cơ)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         item {
                             CategoryChip(
@@ -350,7 +240,7 @@ fun AddWorkoutScreen(
                                 isSelected = selectedCategoryId == null
                             ) {
                                 selectedCategoryId = null
-                                fetchExercises(null)
+                                fetchExercises(null) // Lấy toàn bộ bài tập
                             }
                         }
 
@@ -360,7 +250,7 @@ fun AddWorkoutScreen(
                                 isSelected = selectedCategoryId == cat.id
                             ) {
                                 selectedCategoryId = cat.id
-                                fetchExercises(cat.id)
+                                fetchExercises(cat.id) // Lấy bài tập theo category_id
                             }
                         }
                     }
@@ -368,8 +258,10 @@ fun AddWorkoutScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
+                // Render danh sách bài tập lẻ từ state exercises
                 items(exercises) { exercise ->
                     ExerciseListItem(exercise) {
+                        // Gọi API POST /add-exercise để thêm 1 bài tập cụ thể vào ngày
                         scope.launch {
                             try {
                                 val res = RetrofitClient.instance.addExerciseToSchedule(
@@ -394,6 +286,13 @@ fun AddWorkoutScreen(
     }
 }
 
+/**
+ * Card hiển thị tóm tắt một mẫu lịch tập.
+ * Nằm trong LazyRow "Mẫu lịch tập".
+ *
+ * @param template Dữ liệu mẫu tập luyện.
+ * @param onClick Callback khi người dùng chọn áp dụng mẫu này.
+ */
 @Composable
 fun TemplateCard(template: WorkoutTemplate, onClick: () -> Unit) {
     Card(

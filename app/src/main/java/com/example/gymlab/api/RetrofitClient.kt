@@ -10,7 +10,7 @@ object RetrofitClient {
 //    private const val BASE_URL = "http://192.168.100.234:3000/"
 
 //    private const val BASE_URL = "http://192.168.100.234:3000/"
-    private const val BASE_URL = "http://192.168.137.1:3000/"
+    private const val BASE_URL = "http://192.168.100.233:3000/"
 
     val instance: AuthApi by lazy {
         val retrofit = Retrofit.Builder()

@@ -1,3 +1,12 @@
+/**
+ * File: AchievementsScreen.kt
+ * Project: Gymlab - Ứng dụng hỗ trợ luyện tập tại nhà
+ * Module: Giao diện Hệ thống thành tựu (Phần cá nhân)
+ * Author: Nguyễn Hải Nam - B22DCCN559
+ * Description: Màn hình hiển thị danh sách các huy hiệu (badges) và trạng thái
+ * hoàn thành của người dùng dựa trên điểm (points) và chuỗi ngày tập (streak).
+ */
+
 package com.example.gymlab.ui
 
 import androidx.compose.foundation.background
@@ -30,6 +39,16 @@ import com.example.gymlab.ui.theme.PrimaryPurple
 import com.example.gymlab.ui.theme.TextGray
 import kotlinx.coroutines.launch
 
+/**
+ * Màn hình chính quản lý và hiển thị danh sách Thành tích/Huy hiệu.
+ *
+ * @param userId ID của người dùng hiện tại, nhận từ Navigation/MainActivity.
+ * @param onBackClick Callback xử lý khi nhấn nút quay lại.
+ * @param onActivityClick Callback điều hướng BottomBar.
+ * @param onDietClick Callback điều hướng BottomBar.
+ * @param onScheduleClick Callback điều hướng BottomBar.
+ * @param onNotificationClick Callback mở màn hình NotificationSettingsScreen (thuộc phần cá nhân).
+ */
 @Composable
 fun AchievementsScreen(
     userId: Int, // Đã đồng bộ nhận userId từ MainActivity
@@ -40,15 +59,20 @@ fun AchievementsScreen(
     onNotificationClick: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+
+    // State quản lý danh sách huy hiệu lấy từ API
     var badges by remember { mutableStateOf<List<Badge>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // State để quản lý huy hiệu đang được chọn để xem chi tiết
+    // State quản lý huy hiệu đang được chọn để xem chi tiết (hiển thị Dialog nếu != null)
     var selectedBadge by remember { mutableStateOf<Badge?>(null) }
 
+    // Gọi API lấy dữ liệu thành tựu khi màn hình khởi tạo hoặc khi userId thay đổi
     LaunchedEffect(userId) {
         scope.launch {
             try {
+                // Gọi GET /achievements/:userId
+                // Thuộc tính is_earned đã được backend (server.js) tính toán động sẵn.
                 val response = RetrofitClient.instance.getAchievements(userId)
                 if (response.isSuccessful && response.body()?.success == true) {
                     badges = response.body()?.badges ?: emptyList()
@@ -79,7 +103,8 @@ fun AchievementsScreen(
                     .padding(horizontal = 24.dp)
             ) {
                 Spacer(modifier = Modifier.height(24.dp))
-                // Header
+
+                // Header chứa nút Back và nút cài đặt Thông báo
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -104,6 +129,7 @@ fun AchievementsScreen(
                 Text("Danh sách thành tích", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Hiển thị loading hoặc danh sách
                 if (isLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = PrimaryPurple)
@@ -119,7 +145,7 @@ fun AchievementsScreen(
                                 description = badge.description,
                                 icon = getBadgeIcon(badge.title),
                                 isEarned = badge.isEarned,
-                                onClick = { selectedBadge = badge } // Gán badge được chọn
+                                onClick = { selectedBadge = badge } // Gán badge được chọn để mở popup
                             )
                         }
                         item { Spacer(modifier = Modifier.height(24.dp)) }
@@ -128,6 +154,7 @@ fun AchievementsScreen(
             }
 
             // --- POPUP CHI TIẾT THÀNH TÍCH ---
+            // Chỉ render Dialog khi có một badge được chọn (selectedBadge != null)
             selectedBadge?.let { badge ->
                 BadgeDetailDialog(
                     badge = badge,
@@ -138,6 +165,13 @@ fun AchievementsScreen(
     }
 }
 
+/**
+ * Dialog (Popup) hiển thị thông tin chi tiết của một huy hiệu.
+ * Bao gồm mô tả, yêu cầu cần đạt (điểm, streak) và trạng thái hiện tại.
+ *
+ * @param badge Thông tin chi tiết của huy hiệu được chọn.
+ * @param onDismiss Callback kích hoạt khi người dùng muốn đóng popup.
+ */
 @Composable
 fun BadgeDetailDialog(badge: Badge, onDismiss: () -> Unit) {
     AlertDialog(
@@ -149,7 +183,7 @@ fun BadgeDetailDialog(badge: Badge, onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Biểu tượng huy hiệu trong Popup
+                // Biểu tượng huy hiệu: Đổi màu nền và alpha dựa theo isEarned
                 Box(
                     modifier = Modifier
                         .size(80.dp)
@@ -188,7 +222,7 @@ fun BadgeDetailDialog(badge: Badge, onDismiss: () -> Unit) {
                 Divider(color = Color(0xFFEEEEEE))
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Hiển thị Yêu cầu
+                // Hiển thị điều kiện cần thiết để đạt huy hiệu
                 Text("YÊU CẦU ĐẠT ĐƯỢC:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PrimaryPurple)
                 if (badge.requiredPoints > 0) {
                     Text("• Tích lũy đủ: ${badge.requiredPoints} pts", fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
@@ -199,7 +233,7 @@ fun BadgeDetailDialog(badge: Badge, onDismiss: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Hiển thị Trạng thái
+                // Hiển thị trạng thái hoàn thành
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("TRẠNG THÁI: ", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PrimaryPurple)
                     Text(
@@ -219,6 +253,17 @@ fun BadgeDetailDialog(badge: Badge, onDismiss: () -> Unit) {
     )
 }
 
+/**
+ * Card UI hiển thị một item huy hiệu trong danh sách của màn hình chính.
+ * Mọi UI component bên trong đều thay đổi dựa theo cờ [isEarned].
+ *
+ * @param title Tên huy hiệu.
+ * @param description Mô tả ngắn.
+ * @param icon Biểu tượng của huy hiệu.
+ * @param isEarned Nếu true (đã đạt), Card có nền trắng, đổ bóng và icon màu tím.
+ * Nếu false (chưa đạt), nền xám bẹt và icon xám mờ.
+ * @param onClick Callback mở popup chi tiết khi nhấn vào.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AchievementCard(
@@ -239,6 +284,7 @@ private fun AchievementCard(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Vòng tròn chứa Icon
             Box(
                 modifier = Modifier
                     .size(56.dp)
@@ -269,6 +315,7 @@ private fun AchievementCard(
                     maxLines = 1 // Ở danh sách chỉ hiện 1 dòng cho gọn
                 )
             }
+            // Hiện tick xanh nếu đã hoàn thành
             if (isEarned) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(20.dp))
             }
@@ -276,6 +323,10 @@ private fun AchievementCard(
     }
 }
 
+/**
+ * Hàm tiện ích ánh xạ tên huy hiệu (dựa vào từ khóa trả về từ API)
+ * sang biểu tượng (ImageVector) của Material Design.
+ */
 private fun getBadgeIcon(title: String): ImageVector {
     return when (title.lowercase()) {
         "tập sự" -> Icons.Default.FitnessCenter

@@ -1,3 +1,12 @@
+/**
+ * File: server.js
+ * Project: Gymlab - Ứng dụng hỗ trợ luyện tập tại nhà (Backend API)
+ * Module: Xử lý Lịch tập luyện & Hệ thống Thành tựu (Phần cá nhân)
+ * Author: Nguyễn Hải Nam - B22DCCN559
+ * Description: Backend Server viết bằng Express.js kết nối MySQL.
+ * Cung cấp các RESTful API phục vụ cho ứng dụng Mobile.
+ */
+
 const express = require('express');
 const mysql = require('mysql2');
 const bodyParser = require('body-parser');
@@ -23,6 +32,13 @@ db.connect(err => {
     console.log('Đã kết nối MySQL Workbench thành công!');
 });
 
+/**
+ * Hàm Helper: Lấy ID lịch tập của một ngày cụ thể. Nếu chưa có thì tự động tạo mới.
+ * Sử dụng cơ chế INSERT ... ON DUPLICATE KEY UPDATE để tránh lỗi trùng lặp dữ liệu.
+ * * @param {Number} userId - ID của người dùng.
+ * @param {String} targetDate - Ngày cần kiểm tra/tạo lịch (YYYY-MM-DD).
+ * @param {Function} callback - Callback trả về (err, scheduleId).
+ */
 function getOrCreateSchedule(userId, targetDate, callback) {
     const query = `
         INSERT INTO workout_schedules (user_id, date)
@@ -40,7 +56,10 @@ function getOrCreateSchedule(userId, targetDate, callback) {
     });
 }
 
-// API ĐĂNG NHẬP
+// =======================================================
+// CÁC API KHÔNG THUỘC PHẦN CÁ NHÂN (Giữ nguyên không comment)
+// =======================================================
+
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
     const query = 'SELECT * FROM users WHERE email = ? AND password = ?';
@@ -54,16 +73,12 @@ app.post('/login', (req, res) => {
     });
 });
 
-// API ĐĂNG KÝ
-// server.js
 app.post('/register', (req, res) => {
     const { username, email, password, full_name } = req.body;
     const query = 'INSERT INTO users (username, email, password, full_name) VALUES (?, ?, ?, ?)';
 
     db.execute(query, [username, email, password, full_name], (err, results) => {
         if (err) return res.status(500).json({ success: false, message: err.message });
-
-        // TRẢ VỀ THÔNG TIN USER VỪA TẠO
         res.json({
             success: true,
             message: "Đăng ký thành công",
@@ -77,9 +92,6 @@ app.post('/register', (req, res) => {
     });
 });
 
-// --- API THỰC ĐƠN ---
-
-// 1. Lấy món ăn theo thứ
 app.get('/diet/:day', (req, res) => {
     const day = req.params.day;
     const query = 'SELECT * FROM diet_suggestions WHERE meal_type = ?';
@@ -89,7 +101,6 @@ app.get('/diet/:day', (req, res) => {
     });
 });
 
-// 2. Thêm món ăn mới (Gán tạm user_id = 1 nếu chưa truyền từ App)
 app.post('/diet/add', (req, res) => {
     const { title, calories, meal_type, user_id } = req.body;
     const query = 'INSERT INTO diet_suggestions (title, calories, meal_type, user_id) VALUES (?, ?, ?, ?)';
@@ -108,17 +119,13 @@ app.delete('/diet/:id', (req, res) => {
 
     db.execute(query, [id], (err, result) => {
         if (err) return res.status(500).json({ success: false, message: err.message });
-
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Không tìm thấy món ăn' });
         }
-
         res.json({ success: true, message: 'Đã xóa món ăn!' });
     });
 });
-// --- API CÂN NẶNG ---
 
-// 1. Lấy lịch sử cân nặng (Sắp xếp theo ngày giảm dần và ID giảm dần để lấy cái mới nhất)
 app.get('/weight/history/:userId', (req, res) => {
     const userId = req.params.userId;
     const query = 'SELECT * FROM weight_history WHERE user_id = ? ORDER BY recorded_date DESC, id DESC';
@@ -128,10 +135,9 @@ app.get('/weight/history/:userId', (req, res) => {
     });
 });
 
-// 2. Thêm bản ghi cân nặng mới
 app.post('/weight/add', (req, res) => {
     const { weight, user_id } = req.body;
-    const recorded_date = new Date().toISOString().slice(0, 10); // Lấy ngày YYYY-MM-DD
+    const recorded_date = new Date().toISOString().slice(0, 10);
     const query = 'INSERT INTO weight_history (user_id, weight, recorded_date) VALUES (?, ?, ?)';
     db.execute(query, [user_id || 1, weight, recorded_date], (err, results) => {
         if (err) return res.status(500).json({ success: false, message: err.message });
@@ -139,6 +145,14 @@ app.post('/weight/add', (req, res) => {
     });
 });
 
+// =======================================================
+// CÁC API THUỘC PHẦN CÁ NHÂN (Gymlab - Workout & Achievements)
+// =======================================================
+
+/**
+ * @route GET /categories
+ * @description Lấy danh sách tất cả các nhóm cơ (danh mục bài tập).
+ */
 app.get('/categories', (req, res) => {
     const query = `
         SELECT
@@ -156,48 +170,12 @@ app.get('/categories', (req, res) => {
     });
 });
 
-//app.get('/exercises', (req, res) => {
-//    const { limit, category_id } = req.query;
-//
-//    let query = `
-//        SELECT
-//            e.exercise_id AS id,
-//            e.name,
-//            e.description,
-//            e.video_url,
-//            e.calories,
-//            e.difficulty_level,
-//            e.duration_seconds,
-//            e.category_id,
-//            c.name AS category_name
-//        FROM exercises e
-//        LEFT JOIN categories c ON e.category_id = c.id
-//    `;
-//
-//    const params = [];
-//    const conditions = [];
-//
-//    if (category_id) {
-//        conditions.push('e.category_id = ?');
-//        params.push(Number(category_id));
-//    }
-//
-//    if (conditions.length > 0) {
-//        query += ' WHERE ' + conditions.join(' AND ');
-//    }
-//
-//    query += ' ORDER BY e.exercise_id ASC';
-//
-//    if (limit) {
-//        query += ' LIMIT ?';
-//        params.push(Number(limit));
-//    }
-//
-//    db.execute(query, params, (err, results) => {
-//        if (err) return res.status(500).json({ message: err.message });
-//        res.json(results);
-//    });
-//});
+/**
+ * @route GET /exercises
+ * @description Lấy danh sách bài tập. Có hỗ trợ lọc theo danh mục và giới hạn số lượng.
+ * @query {Number} limit - (Tùy chọn) Số lượng bài tập cần lấy.
+ * @query {Number} category_id - (Tùy chọn) ID nhóm cơ để lọc.
+ */
 app.get('/exercises', (req, res) => {
     const { limit, category_id } = req.query;
 
@@ -245,7 +223,10 @@ app.get('/exercises', (req, res) => {
     });
 });
 
-
+/**
+ * @route GET /templates
+ * @description Lấy danh sách mẫu lịch tập (bao gồm các mẫu toàn hệ thống is_global=1 và mẫu cá nhân).
+ */
 app.get('/templates', (req, res) => {
     const limit = req.query.limit ? Number(req.query.limit) : null;
 
@@ -275,6 +256,13 @@ app.get('/templates', (req, res) => {
     });
 });
 
+/**
+ * @route POST /apply-template
+ * @description Áp dụng toàn bộ bài tập từ một Template vào một ngày cụ thể của User.
+ * * @body {Number} user_id - ID người dùng.
+ * @body {String} target_date - Ngày áp dụng (YYYY-MM-DD).
+ * @body {Number} template_id - ID của mẫu lịch tập cần áp dụng.
+ */
 app.post('/apply-template', (req, res) => {
     const { user_id, target_date, date, template_id } = req.body;
 
@@ -288,9 +276,11 @@ app.post('/apply-template', (req, res) => {
         });
     }
 
+    // 1. Lấy hoặc tạo lịch tập cho ngày mục tiêu
     getOrCreateSchedule(userId, targetDate, (err, scheduleId) => {
         if (err) return res.status(500).json({ success: false, message: err.message });
 
+        // 2. Đếm số lượng bài tập hiện có trong ngày để xếp index tiếp nối
         const checkExisting = `
             SELECT COUNT(*) AS total
             FROM session_exercise_details
@@ -302,6 +292,7 @@ app.post('/apply-template', (req, res) => {
 
             const currentCount = rows[0].total || 0;
 
+            // 3. Copy hàng loạt (Bulk Insert) các bài tập từ template sang lịch tập thực tế
             const insertFromTemplate = `
                 INSERT INTO session_exercise_details
                 (schedule_id, exercise_id, sets, reps, duration_actual, calories_burned, is_completed, order_index)
@@ -332,7 +323,10 @@ app.post('/apply-template', (req, res) => {
     });
 });
 
-
+/**
+ * @route POST /add-exercise
+ * @description Thêm một bài tập lẻ vào lịch tập của ngày cụ thể.
+ */
 app.post('/add-exercise', (req, res) => {
     const { user_id, target_date, date, exercise_id } = req.body;
 
@@ -379,6 +373,11 @@ app.post('/add-exercise', (req, res) => {
     });
 });
 
+/**
+ * @route GET /daily-schedule
+ * @description Lấy danh sách toàn bộ các bài tập trong một ngày cụ thể của User.
+ * Kết hợp JOIN giữa bảng workout_schedules, session_exercise_details và exercises.
+ */
 app.get('/daily-schedule', (req, res) => {
     const { user_id, date } = req.query;
 
@@ -402,6 +401,7 @@ app.get('/daily-schedule', (req, res) => {
             return res.status(500).json({ success: false, message: err.message });
         }
 
+        // Nếu chưa từng có lịch vào ngày này, trả về cấu trúc rỗng
         if (schedules.length === 0) {
             return res.json({
                 totalCalories: 0,
@@ -413,6 +413,7 @@ app.get('/daily-schedule', (req, res) => {
 
         const scheduleId = schedules[0].schedule_id;
 
+        // Xử lý động logic hiển thị duration và calories tùy thuộc vào việc bài tập đã được tập hay chưa.
         const detailsQuery = `
             SELECT
                 sed.detail_id AS detailId,
@@ -456,6 +457,7 @@ app.get('/daily-schedule', (req, res) => {
                 calories: Number(item.calories || 0)
             }));
 
+            // Tính tổng Calo đã đốt
             const totalCalories = rows.reduce(
                 (sum, item) => sum + Number(item.caloriesBurned || 0),
                 0
@@ -473,553 +475,12 @@ app.get('/daily-schedule', (req, res) => {
     });
 });
 
-//app.post('/complete-exercise', (req, res) => {
-//    const { detail_id, duration, mode, effort_feedback } = req.body;
-//
-//    if (!detail_id || duration === undefined || duration === null) {
-//        return res.status(400).json({
-//            success: false,
-//            message: 'Thiếu dữ liệu'
-//        });
-//    }
-//
-//    if (mode && !['normal', 'ai'].includes(mode)) {
-//        return res.status(400).json({
-//            success: false,
-//            message: 'Mode không hợp lệ'
-//        });
-//    }
-//
-//    if (
-//        effort_feedback !== undefined &&
-//        effort_feedback !== null &&
-//        ![-1, 0, 1].includes(Number(effort_feedback))
-//    ) {
-//        return res.status(400).json({
-//            success: false,
-//            message: 'effort_feedback không hợp lệ'
-//        });
-//    }
-//
-//    const findDetail = `
-//            SELECT
-//                sed.detail_id,
-//                sed.schedule_id,
-//                sed.exercise_id,
-//                sed.is_completed,
-//                e.calories,
-//                e.duration_seconds,
-//                ws.user_id,
-//                u.weight  -- Lấy thêm cân nặng từ bảng users
-//            FROM session_exercise_details sed
-//            JOIN exercises e ON sed.exercise_id = e.exercise_id
-//            JOIN workout_schedules ws ON sed.schedule_id = ws.schedule_id
-//            JOIN users u ON ws.user_id = u.user_id -- Nối bảng để lấy cân nặng
-//            WHERE sed.detail_id = ?
-//            LIMIT 1
-//        `;
-//
-//    db.execute(findDetail, [detail_id], (err, rows) => {
-//        if (err) return res.status(500).json({ success: false, message: err.message });
-//
-//        if (rows.length === 0) {
-//            return res.status(404).json({
-//                success: false,
-//                message: 'Không tìm thấy bài tập'
-//            });
-//        }
-//
-//        const row = rows[0];
-//
-//        if (Number(row.is_completed) === 1) {
-//            return res.status(409).json({
-//                success: false,
-//                message: 'Bài tập này đã hoàn thành rồi'
-//            });
-//        }
-//
-//        const durationNum = Number(duration);
-//        const baseCalories = Number(row.calories || 0);
-//        const baseDuration = Number(row.duration_seconds || 60);
-//
-//        const userWeight = Number(row.weight) || 65.0;
-//        let rawCalories = (durationNum / baseDuration) * baseCalories;
-//        let weightAdjustedCalories = rawCalories * (userWeight / 65.0);
-//
-//        let effortMultiplier = 1.0;
-//        const feedback = Number(effort_feedback);
-//
-//        if (feedback === -1) {
-//            effortMultiplier = 0.9;  // Dưới sức: Người tập tập tà tà, giảm 10% calo
-//        } else if (feedback === 1) {
-//            effortMultiplier = 1.15; // Quá sức: Tim đập nhanh, bung hết sức, tăng 15% calo
-//        }
-//
-//        // Bước 4: Chốt số Calo thực tế
-//        const calories = Math.round(weightAdjustedCalories * effortMultiplier);
-//
-//        // (Exp có thể giữ nguyên logic cũ của bạn)
-//        const exp = Math.max(1, Math.floor(durationNum / 10));
-//
-//        const updateDetail = `
-//            UPDATE session_exercise_details
-//            SET
-//                duration_actual = ?,
-//                calories_burned = ?,
-//                is_completed = 1,
-//                workout_mode = ?,
-//                effort_feedback = ?,
-//                completed_at = NOW()
-//            WHERE detail_id = ?
-//        `;
-//
-//        db.execute(
-//            updateDetail,
-//            [
-//                durationNum,
-//                calories,
-//                mode || 'normal',
-//                effort_feedback ?? null,
-//                detail_id
-//            ],
-//            (err2) => {
-//                if (err2) {
-//                    return res.status(500).json({
-//                        success: false,
-//                        message: err2.message
-//                    });
-//                }
-//
-//                const updateAchievement = `
-//                    INSERT INTO achievements
-//                    (user_id, current_streak, longest_streak, total_points, total_exp, level, last_activity_date, last_workout_date)
-//                    VALUES (?, 0, 0, 0, ?, 1, CURDATE(), CURDATE())
-//                    ON DUPLICATE KEY UPDATE
-//                        total_exp = total_exp + VALUES(total_exp),
-//                        level = FLOOR((total_exp + VALUES(total_exp)) / 1000) + 1,
-//                        last_activity_date = CURDATE(),
-//                        last_workout_date = CURDATE()
-//                `;
-//
-//                db.execute(updateAchievement, [row.user_id, exp], (err3) => {
-//                    if (err3) {
-//                        return res.status(500).json({
-//                            success: false,
-//                            message: err3.message
-//                        });
-//                    }
-//
-//                    res.json({
-//                        success: true,
-//                        message: 'Hoàn thành bài tập!',
-//                        calories,
-//                        exp
-//                    });
-//                });
-//            }
-//        );
-//    });
-//});
-
-//app.post('/complete-exercise', (req, res) => {
-//    console.log("=== CÓ REQUEST GỌI VÀO /complete-exercise ===");
-//    console.log("Dữ liệu App gửi lên:", req.body);
-//    const { detail_id, duration, mode, effort_feedback } = req.body;
-//
-//    if (!detail_id || duration === undefined || duration === null) {
-//        return res.status(400).json({ success: false, message: 'Thiếu dữ liệu' });
-//    }
-//
-//    if (mode && !['normal', 'ai'].includes(mode)) {
-//        return res.status(400).json({ success: false, message: 'Mode không hợp lệ' });
-//    }
-//
-//    const findDetail = `
-//        SELECT
-//            sed.detail_id, sed.schedule_id, sed.exercise_id, sed.is_completed,
-//            e.calories, e.duration_seconds,
-//            ws.user_id, u.weight
-//        FROM session_exercise_details sed
-//        JOIN exercises e ON sed.exercise_id = e.exercise_id
-//        JOIN workout_schedules ws ON sed.schedule_id = ws.schedule_id
-//        JOIN users u ON ws.user_id = u.user_id
-//        WHERE sed.detail_id = ? LIMIT 1
-//    `;
-//
-//    db.execute(findDetail, [detail_id], (err, rows) => {
-//        if (err) return res.status(500).json({ success: false, message: "Lỗi tìm bài tập: " + err.message });
-//        if (rows.length === 0) return res.status(404).json({ success: false, message: 'Không tìm thấy bài tập' });
-//
-//        const row = rows[0];
-//
-//        if (Number(row.is_completed) === 1) {
-//            return res.status(409).json({ success: false, message: 'Bài tập này đã hoàn thành rồi' });
-//        }
-//
-//        // --- 1. TÍNH TOÁN CALO & HỆ SỐ NỖ LỰC ---
-//        const durationNum = Number(duration);
-//        const baseCalories = Number(row.calories || 0);
-//        const baseDuration = Number(row.duration_seconds || 60);
-//        const userWeight = Number(row.weight) || 65.0;
-//
-//        let rawCalories = (durationNum / baseDuration) * baseCalories;
-//        let weightAdjustedCalories = rawCalories * (userWeight / 65.0);
-//
-//        const pointsEarned = calories;
-//        const workoutDuration = durationNum;
-//
-//        let totalTime = ach.total_time || 0;
-//        const newTotalTime = totalTime + workoutDuration;
-//
-//        let effortMultiplier = 1.0;
-//        const feedback = (effort_feedback !== undefined && effort_feedback !== null) ? Number(effort_feedback) : 0;
-//
-//        if (feedback === -1) effortMultiplier = 0.9;
-//        else if (feedback === 1) effortMultiplier = 1.15;
-//
-//        const calories = Math.round(weightAdjustedCalories * effortMultiplier);
-//        const exp = Math.max(1, Math.floor(durationNum / 10));
-//        const pointsEarned = calories; // Lấy Calo làm Điểm
-//
-//        // --- 2. CẬP NHẬT CHI TIẾT BÀI TẬP (ĐÃ XÓA COMPLETED_AT) ---
-//        const updateDetail = `
-//            UPDATE session_exercise_details
-//            SET
-//                duration_actual = ?,
-//                calories_burned = ?,
-//                is_completed = 1,
-//                workout_mode = ?,
-//                effort_feedback = ?,
-//                completed_at = NOW()
-//            WHERE detail_id = ?
-//        `;
-//        const updateParams = [
-//            durationNum,     // ? thứ 1
-//            calories,        // ? thứ 2
-//            mode || 'normal',// ? thứ 3
-//            feedback,        // ? thứ 4
-//            detail_id        // ? thứ 5 (WHERE)
-//        ];
-//        const upsertAchievement = `
-//            INSERT INTO achievements
-//            (user_id, current_streak, longest_streak, total_points, total_exp, level, total_time, last_activity_date, last_workout_date)
-//            VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE(), CURDATE())
-//            ON DUPLICATE KEY UPDATE
-//                current_streak = VALUES(current_streak),
-//                longest_streak = VALUES(longest_streak),
-//                total_points = VALUES(total_points),
-//                total_exp = VALUES(total_exp),
-//                level = VALUES(level),
-//                total_time = VALUES(total_time), -- THÊM DÒNG NÀY
-//                last_activity_date = VALUES(last_activity_date),
-//                last_workout_date = VALUES(last_workout_date)
-//        `;
-//        db.execute(updateDetail, [durationNum, calories, mode || 'normal', feedback, detail_id], (err2) => {
-//            if (err2) {
-//                console.error("LỖI SQL UPDATE:", err2.message);
-//                return res.status(500).json({ success: false, message: "Lỗi update SQL: " + err2.message });
-//            }
-//            // --- 3. CẬP NHẬT THÀNH TỰU (ĐIỂM & CHUỖI) ---
-//            const getAchievementQuery = 'SELECT * FROM achievements WHERE user_id = ?';
-//
-//            db.execute(getAchievementQuery, [row.user_id], (err3, achRows) => {
-//                if (err3) return res.status(500).json({ success: false, message: "Lỗi lấy thành tựu: " + err3.message });
-//
-//                let currentStreak = 0, longestStreak = 0, totalPoints = 0, totalExp = 0, lastWorkoutDate = null;
-//
-//                if (achRows.length > 0) {
-//                    const ach = achRows[0];
-//                    currentStreak = ach.current_streak || 0;
-//                    longestStreak = ach.longest_streak || 0;
-//                    totalPoints = ach.total_points || 0;
-//                    totalExp = ach.total_exp || 0;
-//                    lastWorkoutDate = ach.last_workout_date;
-//                }
-//
-//                // Tính toán chuỗi
-//                const today = new Date();
-//                today.setHours(0, 0, 0, 0);
-//                let newCurrentStreak = currentStreak;
-//
-//                if (lastWorkoutDate) {
-//                    const lastDate = new Date(lastWorkoutDate);
-//                    lastDate.setHours(0, 0, 0, 0);
-//                    const diffDays = Math.ceil((today - lastDate) / (1000 * 60 * 60 * 24));
-//
-//                    if (diffDays === 1) newCurrentStreak += 1;
-//                    else if (diffDays > 1) newCurrentStreak = 1;
-//                    else if (diffDays === 0 && currentStreak === 0) newCurrentStreak = 1;
-//                } else {
-//                    newCurrentStreak = 1;
-//                }
-//
-//                const newLongestStreak = Math.max(longestStreak, newCurrentStreak);
-//                const newTotalPoints = totalPoints + pointsEarned;
-//                const newTotalExp = totalExp + exp;
-//                const newLevel = Math.floor(newTotalExp / 1000) + 1;
-//
-//                const upsertAchievement = `
-//                    INSERT INTO achievements
-//                    (user_id, current_streak, longest_streak, total_points, total_exp, level, last_activity_date, last_workout_date)
-//                    VALUES (?, ?, ?, ?, ?, ?, CURDATE(), CURDATE())
-//                    ON DUPLICATE KEY UPDATE
-//                        current_streak = VALUES(current_streak),
-//                        longest_streak = VALUES(longest_streak),
-//                        total_points = VALUES(total_points),
-//                        total_exp = VALUES(total_exp),
-//                        level = VALUES(level),
-//                        last_activity_date = VALUES(last_activity_date),
-//                        last_workout_date = VALUES(last_workout_date)
-//                `;
-//
-//                db.execute(upsertAchievement, [
-//                    row.user_id, newCurrentStreak, newLongestStreak, newTotalPoints, newTotalExp, newLevel
-//                ], (err4) => {
-//                    if (err4) return res.status(500).json({ success: false, message: "Lỗi lưu DB thành tựu: " + err4.message });
-//
-//                    res.json({
-//                        success: true,
-//                        message: 'Hoàn thành bài tập!',
-//                        calories: calories,
-//                        exp: exp,
-//                        points: pointsEarned,
-//                        streak: newCurrentStreak
-//                    });
-//                });
-//            });
-//        });
-//    });
-//});
-//app.post('/complete-exercise', (req, res) => {
-//    const { detail_id, duration, mode, effort_feedback } = req.body;
-//
-//    if (!detail_id || duration === undefined) {
-//        return res.status(400).json({ success: false, message: 'Thiếu dữ liệu' });
-//    }
-//
-//    const findDetail = `
-//        SELECT sed.detail_id, sed.exercise_id, sed.is_completed, e.calories, e.duration_seconds, ws.user_id, u.weight
-//        FROM session_exercise_details sed
-//        JOIN exercises e ON sed.exercise_id = e.exercise_id
-//        JOIN workout_schedules ws ON sed.schedule_id = ws.schedule_id
-//        JOIN users u ON ws.user_id = u.user_id
-//        WHERE sed.detail_id = ? LIMIT 1
-//    `;
-//
-//    db.execute(findDetail, [detail_id], (err, rows) => {
-//        if (err) return res.status(500).json({ success: false, message: err.message });
-//        if (rows.length === 0) return res.status(404).json({ success: false, message: 'Không tìm thấy bài tập' });
-//
-//        const row = rows[0];
-//        if (Number(row.is_completed) === 1) return res.status(409).json({ success: false, message: 'Bài tập đã xong' });
-//
-//        // --- 1. TÍNH TOÁN CALO & EXP ---
-//        const durationNum = Number(duration);
-//        const feedback = (effort_feedback !== undefined) ? Number(effort_feedback) : 0;
-//        let effortMultiplier = (feedback === -1) ? 0.9 : (feedback === 1) ? 1.15 : 1.0;
-//
-//        const calories = Math.round(((durationNum / row.duration_seconds) * row.calories) * (row.weight / 65.0) * effortMultiplier);
-//        const exp = Math.max(1, Math.floor(durationNum / 10));
-//        const pointsEarned = calories; // Quy đổi calo thành điểm thành tựu
-//
-//        // --- 2. CẬP NHẬT TRẠNG THÁI BÀI TẬP ---
-//        const updateDetail = `
-//            UPDATE session_exercise_details
-//            SET duration_actual = ?, calories_burned = ?, is_completed = 1, workout_mode = ?, effort_feedback = ?, completed_at = NOW()
-//            WHERE detail_id = ?
-//        `;
-//
-//        db.execute(updateDetail, [durationNum, calories, mode || 'normal', feedback, detail_id], (err2) => {
-//            if (err2) return res.status(500).json({ success: false, message: err2.message });
-//
-//            // --- 3. CẬP NHẬT THÀNH TỰU (ĐIỂM, CHUỖI, THỜI GIAN) ---
-//            db.execute('SELECT * FROM achievements WHERE user_id = ?', [row.user_id], (err3, achRows) => {
-//                if (err3) return res.status(500).json({ success: false, message: err3.message });
-//
-//                let currentStreak = 0, longestStreak = 0, totalPoints = 0, totalExp = 0, totalTime = 0, lastDate = null;
-//                if (achRows.length > 0) {
-//                    const ach = achRows[0];
-//                    currentStreak = ach.current_streak || 0;
-//                    longestStreak = ach.longest_streak || 0;
-//                    totalPoints = ach.total_points || 0;
-//                    totalExp = ach.total_exp || 0;
-//                    totalTime = ach.total_time || 0;
-//                    lastDate = ach.last_workout_date;
-//                }
-//
-//                // Tính Streak
-//                const today = new Date(); today.setHours(0,0,0,0);
-//                let newStreak = currentStreak;
-//                if (lastDate) {
-//                    const diffDays = Math.ceil((today - new Date(lastDate)) / (1000 * 60 * 60 * 24));
-//                    newStreak = (diffDays === 1) ? currentStreak + 1 : (diffDays > 1) ? 1 : currentStreak;
-//                    if (diffDays === 0 && currentStreak === 0) newStreak = 1;
-//                } else { newStreak = 1; }
-//
-//                const upsertAchievement = `
-//                    INSERT INTO achievements (user_id, current_streak, longest_streak, total_points, total_exp, level, total_time, last_activity_date, last_workout_date)
-//                    VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE(), CURDATE())
-//                    ON DUPLICATE KEY UPDATE
-//                        current_streak = VALUES(current_streak), longest_streak = VALUES(longest_streak),
-//                        total_points = VALUES(total_points), total_exp = VALUES(total_exp),
-//                        level = VALUES(level), total_time = VALUES(total_time),
-//                        last_activity_date = CURDATE(), last_workout_date = CURDATE()
-//                `;
-//
-//                const newTotalPoints = totalPoints + pointsEarned;
-//                const newTotalExp = totalExp + exp;
-//                const newTotalTime = totalTime + durationNum;
-//
-//                db.execute(upsertAchievement, [
-//                    row.user_id, newStreak, Math.max(longestStreak, newStreak),
-//                    newTotalPoints, newTotalExp, Math.floor(newTotalExp / 1000) + 1, newTotalTime
-//                ], (err4) => {
-//                    if (err4) return res.status(500).json({ success: false, message: err4.message });
-//                    res.json({ success: true, calories, exp, points: pointsEarned, streak: newStreak, total_time: newTotalTime });
-//                });
-//            });
-//        });
-//    });
-//});
-
-//app.post('/complete-exercise', (req, res) => {
-//    const { detail_id, duration, mode, effort_feedback } = req.body;
-//
-//    if (!detail_id || duration === undefined || duration === null) {
-//        return res.status(400).json({ success: false, message: 'Thiếu dữ liệu' });
-//    }
-//
-//    const findDetail = `
-//        SELECT
-//            sed.detail_id, sed.schedule_id, sed.exercise_id, sed.is_completed,
-//            e.calories, e.duration_seconds,
-//            ws.user_id, u.weight
-//        FROM session_exercise_details sed
-//        JOIN exercises e ON sed.exercise_id = e.exercise_id
-//        JOIN workout_schedules ws ON sed.schedule_id = ws.schedule_id
-//        JOIN users u ON ws.user_id = u.user_id
-//        WHERE sed.detail_id = ? LIMIT 1
-//    `;
-//
-//    db.execute(findDetail, [detail_id], (err, rows) => {
-//        if (err) return res.status(500).json({ success: false, message: "Lỗi tìm bài tập: " + err.message });
-//        if (rows.length === 0) return res.status(404).json({ success: false, message: 'Không tìm thấy bài tập' });
-//
-//        const row = rows[0];
-//        if (Number(row.is_completed) === 1) {
-//            return res.status(409).json({ success: false, message: 'Bài tập này đã hoàn thành rồi' });
-//        }
-//
-//        // --- 1. TÍNH TOÁN CALO & HỆ SỐ NỖ LỰC ---
-//        const durationNum = Number(duration);
-//        const baseCalories = Number(row.calories || 0);
-//        const baseDuration = Number(row.duration_seconds || 60);
-//        const userWeight = Number(row.weight) || 65.0;
-//
-//        // Tính Calo thô theo cân nặng
-//        let rawCalories = (durationNum / baseDuration) * baseCalories;
-//        let weightAdjustedCalories = rawCalories * (userWeight / 65.0);
-//
-//        // Tính hệ số nỗ lực (Feedback)
-//        let effortMultiplier = 1.0;
-//        const feedback = (effort_feedback !== undefined && effort_feedback !== null) ? Number(effort_feedback) : 0;
-//        if (feedback === -1) effortMultiplier = 0.9;
-//        else if (feedback === 1) effortMultiplier = 1.15;
-//
-//        // Chốt số Calo và Exp
-//        const finalCalories = Math.round(weightAdjustedCalories * effortMultiplier);
-//        const pointsEarned = finalCalories;
-//        const expEarned = Math.max(1, Math.floor(durationNum / 10));
-//
-//        // --- 2. CẬP NHẬT CHI TIẾT BÀI TẬP ---
-//        const updateDetail = `
-//            UPDATE session_exercise_details
-//            SET
-//                duration_actual = ?,
-//                calories_burned = ?,
-//                is_completed = 1,
-//                workout_mode = ?,
-//                effort_feedback = ?,
-//                completed_at = NOW()
-//            WHERE detail_id = ?
-//        `;
-//
-//        db.execute(updateDetail, [durationNum, finalCalories, mode || 'normal', feedback, detail_id], (err2) => {
-//            if (err2) return res.status(500).json({ success: false, message: "Lỗi update SQL: " + err2.message });
-//
-//            // --- 3. CẬP NHẬT THÀNH TỰU (ĐIỂM, CHUỖI & THỜI GIAN) ---
-//            const getAchievementQuery = 'SELECT * FROM achievements WHERE user_id = ?';
-//            db.execute(getAchievementQuery, [row.user_id], (err3, achRows) => {
-//                if (err3) return res.status(500).json({ success: false, message: "Lỗi lấy thành tựu: " + err3.message });
-//
-//                let currentStreak = 0, longestStreak = 0, totalPoints = 0, totalExp = 0, totalTime = 0, lastWorkoutDate = null;
-//                if (achRows.length > 0) {
-//                    const ach = achRows[0];
-//                    currentStreak = ach.current_streak || 0;
-//                    longestStreak = ach.longest_streak || 0;
-//                    totalPoints = ach.total_points || 0;
-//                    totalExp = ach.total_exp || 0;
-//                    totalTime = ach.total_time || 0;
-//                    lastWorkoutDate = ach.last_workout_date;
-//                }
-//
-//                // Tính toán chuỗi ngày (Streak)
-//                const today = new Date();
-//                today.setHours(0, 0, 0, 0);
-//                let newCurrentStreak = currentStreak;
-//
-//                if (lastWorkoutDate) {
-//                    const lastDate = new Date(lastWorkoutDate);
-//                    lastDate.setHours(0, 0, 0, 0);
-//                    const diffDays = Math.ceil((today - lastDate) / (1000 * 60 * 60 * 24));
-//
-//                    if (diffDays === 1) newCurrentStreak += 1;
-//                    else if (diffDays > 1) newCurrentStreak = 1;
-//                    else if (diffDays === 0 && currentStreak === 0) newCurrentStreak = 1;
-//                } else {
-//                    newCurrentStreak = 1;
-//                }
-//
-//                const newTotalPoints = totalPoints + pointsEarned;
-//                const newTotalExp = totalExp + expEarned;
-//                const newTotalTime = totalTime + durationNum; // Cộng dồn giây tập
-//                const newLevel = Math.floor(newTotalExp / 1000) + 1;
-//
-//                const upsertAchievement = `
-//                    INSERT INTO achievements
-//                    (user_id, current_streak, longest_streak, total_points, total_exp, level, total_time, last_activity_date, last_workout_date)
-//                    VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE(), CURDATE())
-//                    ON DUPLICATE KEY UPDATE
-//                        current_streak = VALUES(current_streak),
-//                        longest_streak = VALUES(longest_streak),
-//                        total_points = VALUES(total_points),
-//                        total_exp = VALUES(total_exp),
-//                        level = VALUES(level),
-//                        total_time = VALUES(total_time),
-//                        last_activity_date = VALUES(last_activity_date),
-//                        last_workout_date = VALUES(last_workout_date)
-//                `;
-//
-//                db.execute(upsertAchievement, [
-//                    row.user_id, newCurrentStreak, Math.max(longestStreak, newCurrentStreak),
-//                    newTotalPoints, newTotalExp, newLevel, newTotalTime
-//                ], (err4) => {
-//                    if (err4) return res.status(500).json({ success: false, message: "Lỗi lưu DB thành tựu: " + err4.message });
-//
-//                    res.json({
-//                        success: true,
-//                        message: 'Hoàn thành bài tập!',
-//                        calories: finalCalories,
-//                        exp: expEarned,
-//                        points: pointsEarned,
-//                        streak: newCurrentStreak,
-//                        total_time: newTotalTime
-//                    });
-//                });
-//            });
-//        });
-//    });
-//});
+/**
+ * @route POST /complete-exercise
+ * @description API cốt lõi xử lý Logic sau khi tập xong 1 bài.
+ * Tính toán Calories động dựa trên cân nặng, thời gian, mức độ nỗ lực.
+ * Cập nhật Streak (chuỗi ngày tập) và Exp (Kinh nghiệm), Level.
+ */
 app.post('/complete-exercise', (req, res) => {
     console.log(req.body)
     const { detail_id, duration, mode, effort_feedback } = req.body;
@@ -1074,14 +535,18 @@ app.post('/complete-exercise', (req, res) => {
             });
         }
 
+        // --- BƯỚC 1: TÍNH TOÁN LƯỢNG CALORIES ĐÃ ĐỐT ---
         const durationNum = Number(duration);
         const baseCalories = Number(row.calories || 0);
         const baseDuration = Number(row.duration_seconds || 60);
         const userWeight = Number(row.weight) || 65.0;
 
+        // Nội suy Calo dựa vào thời gian tập thực tế
         let rawCalories = (durationNum / baseDuration) * baseCalories;
+        // Nhân thêm hệ số cân nặng so với chuẩn 65kg
         let weightAdjustedCalories = rawCalories * (userWeight / 65.0);
 
+        // Nhân hệ số nỗ lực (feedback do người dùng đánh giá)
         let effortMultiplier = 1.0;
         const feedback = (effort_feedback !== undefined && effort_feedback !== null)
             ? Number(effort_feedback)
@@ -1092,10 +557,11 @@ app.post('/complete-exercise', (req, res) => {
 
         const finalCalories = Math.max(1, Math.round(weightAdjustedCalories * effortMultiplier));
 
-        // Theo yêu cầu của bạn:
+        // Quy đổi Calo sang điểm Exp và Point
         const expEarned = finalCalories;
         const pointsEarned = finalCalories;
 
+        // --- BƯỚC 2: CẬP NHẬT TRẠNG THÁI BÀI TẬP ---
         const updateDetail = `
             UPDATE session_exercise_details
             SET
@@ -1118,7 +584,7 @@ app.post('/complete-exercise', (req, res) => {
                     });
                 }
 
-                // Lấy tiến độ của cả ngày để xét streak >= 50%
+                // --- BƯỚC 3: KIỂM TRA ĐIỀU KIỆN ĐỂ DUY TRÌ STREAK (>= 50% số bài trong ngày) ---
                 const dailyProgressQuery = `
                     SELECT
                         COUNT(*) AS total_count,
@@ -1140,6 +606,7 @@ app.post('/complete-exercise', (req, res) => {
                     const reached50Percent =
                         totalCount > 0 && (completedCount / totalCount) >= 0.5;
 
+                    // --- BƯỚC 4: TÍNH TOÁN VÀ CẬP NHẬT CHỈ SỐ THÀNH TỰU (UPSERT) ---
                     const getAchievementQuery = `
                         SELECT *
                         FROM achievements
@@ -1174,7 +641,7 @@ app.post('/complete-exercise', (req, res) => {
 
                         let newCurrentStreak = currentStreak;
 
-                        // Chỉ xử lý streak nếu hôm nay đạt >= 50%
+                        // Chỉ cộng/giữ Streak nếu hôm nay tập đạt đủ >= 50% khối lượng
                         if (reached50Percent) {
                             const today = new Date(row.schedule_date);
                             today.setHours(0, 0, 0, 0);
@@ -1191,9 +658,9 @@ app.post('/complete-exercise', (req, res) => {
                                     // hôm nay đã từng được tính streak rồi -> giữ nguyên
                                     newCurrentStreak = currentStreak || 1;
                                 } else if (diffDays === 1) {
-                                    newCurrentStreak = currentStreak + 1;
+                                    newCurrentStreak = currentStreak + 1; // Tập liên tiếp
                                 } else {
-                                    newCurrentStreak = 1;
+                                    newCurrentStreak = 1; // Mất chuỗi, làm lại từ đầu
                                 }
                             } else {
                                 newCurrentStreak = 1;
@@ -1204,6 +671,8 @@ app.post('/complete-exercise', (req, res) => {
                         const newTotalPoints = totalPoints + pointsEarned;
                         const newTotalExp = totalExp + expEarned;
                         const newTotalTime = totalTime + durationNum;
+
+                        // Tính level (1000 exp = 1 level)
                         const newLevel = Math.floor(newTotalExp / 1000) + 1;
 
                         const upsertAchievement = `
@@ -1231,7 +700,7 @@ app.post('/complete-exercise', (req, res) => {
                                 last_workout_date = VALUES(last_workout_date)
                         `;
 
-                        // chỉ update last_workout_date nếu đạt >= 50%
+                        // Chỉ update last_workout_date nếu đạt >= 50%
                         const workoutDateForStreak = reached50Percent ? row.schedule_date : lastWorkoutDate;
 
                         db.execute(
@@ -1272,6 +741,10 @@ app.post('/complete-exercise', (req, res) => {
     });
 });
 
+/**
+ * @route POST /workout-templates
+ * @description Tạo mới một mẫu lịch tập cá nhân.
+ */
 app.post('/workout-templates', (req, res) => {
     const { user_id, name, description, exercises } = req.body;
     const userId = user_id || 1;
@@ -1293,6 +766,7 @@ app.post('/workout-templates', (req, res) => {
 
         const templateId = result.insertId;
 
+        // Chuẩn bị dữ liệu Bulk Insert cho bảng template_exercises
         const values = exercises.map((ex, index) => [
             templateId,
             ex.exerciseId || ex.exercise_id,
@@ -1318,6 +792,11 @@ app.post('/workout-templates', (req, res) => {
     });
 });
 
+/**
+ * @route GET /achievements/:userId
+ * @description Trả về thống kê tổng quát của người dùng và danh sách trạng thái huy hiệu.
+ * Trạng thái huy hiệu (is_earned) được tính toán động (dynamic mapping) thay vì lưu tĩnh trong DB.
+ */
 app.get('/achievements/:userId', (req, res) => {
     const userId = req.params.userId;
 
